@@ -1,0 +1,129 @@
+// ignore_for_file: library_private_types_in_public_api, avoid_print, import_of_legacy_library_into_null_safe
+
+import 'package:flutter/material.dart';
+import 'package:flutter_simple_shopify/flutter_simple_shopify.dart';
+
+class CollectionTab extends StatefulWidget {
+  const CollectionTab({Key? key}) : super(key: key);
+
+  @override
+  _CollectionTabState createState() => _CollectionTabState();
+}
+
+class _CollectionTabState extends State<CollectionTab> {
+  List<Collection> collections = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    _fetchCollections();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Collections')),
+      body: Center(
+        child: _isLoading
+            ? const CircularProgressIndicator()
+            : ListView.builder(
+                itemCount: collections.length,
+                itemBuilder: (_, int index) => ListTile(
+                  onTap: () => _navigateToCollectionDetailScreen(
+                      collections[index].id, collections[index].title),
+                  title: Text(collections[index].title),
+                ),
+              ),
+      ),
+    );
+  }
+
+  Future<void> _fetchCollections() async {
+    try {
+      final shopifyStore = ShopifyStore.instance;
+      final collections = await shopifyStore.getAllCollections();
+      if (mounted) {
+        setState(() {
+          this.collections = collections;
+          _isLoading = false;
+        });
+      }
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  void _navigateToCollectionDetailScreen(
+      String collectionId, String collectionTitle) {
+    Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+            builder: (context) => CollectionDetailScreen(
+                collectionId: collectionId, collectionTitle: collectionTitle)));
+  }
+}
+
+class CollectionDetailScreen extends StatefulWidget {
+  final String? collectionId;
+  final String? collectionTitle;
+
+  // ignore: sort_constructors_first
+  const CollectionDetailScreen(
+      {Key? key, @required this.collectionId, @required this.collectionTitle})
+      : super(key: key);
+  @override
+  _CollectionDetailScreenState createState() => _CollectionDetailScreenState();
+}
+
+class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
+  List<Product> products = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    _fetchProductsByCollectionId();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.collectionTitle!),
+      ),
+      body: Center(
+        child: _isLoading
+            ? const CircularProgressIndicator()
+            : ListView.builder(
+                itemCount: products.length,
+                itemBuilder: (_, int index) => ListTile(
+                      title: Text(products[index].title),
+                    )),
+      ),
+    );
+  }
+
+  Future<void> _fetchProductsByCollectionId() async {
+    try {
+      final shopifyStore = ShopifyStore.instance;
+      final products =
+          await shopifyStore.getXProductsAfterCursorWithinCollection(
+        widget.collectionId,
+        4,
+        null,
+        //   SortKeyProduct.RELEVANCE,
+      );
+      if (mounted) {
+        setState(() {
+          this.products = products;
+          _isLoading = false;
+        });
+      }
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e) {
+      print(e);
+    }
+  }
+}
